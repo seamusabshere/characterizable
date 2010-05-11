@@ -9,8 +9,11 @@ begin
     gem.description = %Q{TODO: longer description of your gem}
     gem.email = "seamus@abshere.net"
     gem.homepage = "http://github.com/seamusabshere/characterizable"
-    gem.authors = ["Seamus Abshere"]
-    gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
+    gem.authors = ["Andy Rossmeissl", "Seamus Abshere"]
+    gem.add_dependency 'blockenspiel', '>=0.3.2'
+    gem.add_dependency 'activesupport', '>=2.3.5'
+    gem.add_development_dependency 'activerecord', '>=2.3.5'
+    gem.add_development_dependency "shoulda", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new

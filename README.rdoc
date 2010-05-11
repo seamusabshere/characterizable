@@ -1,6 +1,8 @@
 = characterizable
 
-Description goes here.
+"Cognitive mechanisms, on this view, take mathematically characterizable inputs to deliver mathematically characterizable outputs, and qua computational devices, that is all."
+
+http://tinyurl.com/28tcrw2
 
 == Note on Patches/Pull Requests
  
