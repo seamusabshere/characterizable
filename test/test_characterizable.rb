@@ -1,36 +1,40 @@
 require 'helper'
 
 # TODO
-# class Automobile
-#   characterize do
-#     has :make do |make|
-#       make.reveals :model_year do |model_year|
-#         model_year.reveals :model, :trumps => :size_class do |model|
-#           model.reveals :variant, :trumps => :hybridity
-#         end
-#       end
-#     end
-#     has :size_class
-#     has :fuel_type
-#     has :fuel_efficiency, :trumps => [:urbanity, :hybridity], :measures => :length_per_volume
-#     has :urbanity, :measures => :percentage
-#     has :hybridity
-#     has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
-#     has :daily_duration, :trumps => [:annual_distance_estimate, :weekly_distance_estimate, :daily_distance_estimate], :measures => :time #, :weekly_fuel_cost, :annual_fuel_cost]
-#     has :weekly_distance_estimate, :trumps => [:annual_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
-#     has :annual_distance_estimate, :trumps => [:weekly_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
-#     has :acquisition
-#     has :retirement
-#   end
-# end
+class Automobile
+  attr_accessor :make, :model_year, :model, :variant, :size_class, :hybridity
+  include Characterizable
+  characterize do
+    has :make do |make|
+      make.reveals :model_year do |model_year|
+        model_year.reveals :model, :trumps => :size_class do |model|
+          model.reveals :variant, :trumps => :hybridity
+        end
+      end
+    end
+    has :size_class
+    # has :fuel_type
+    # has :fuel_efficiency, :trumps => [:urbanity, :hybridity], :measures => :length_per_volume
+    # has :urbanity, :measures => :percentage
+    has :hybridity
+    # has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
+    # has :daily_duration, :trumps => [:annual_distance_estimate, :weekly_distance_estimate, :daily_distance_estimate], :measures => :time #, :weekly_fuel_cost, :annual_fuel_cost]
+    # has :weekly_distance_estimate, :trumps => [:annual_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
+    # has :annual_distance_estimate, :trumps => [:weekly_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
+    # has :acquisition
+    # has :retirement
+  end
+end
 
 class SimpleAutomobile
   include Characterizable
   attr_accessor :make
   attr_accessor :model
+  attr_accessor :variant
   characterize do
     has :make
     has :model
+    has :variant, :trumps => :model
   end
 end
 
@@ -50,12 +54,43 @@ class TestCharacterizable < Test::Unit::TestCase
   should "tell you what characteristics are known" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
-    assert_equal [:make], a.known_characteristics
+    assert_equal [:make], a.known_characteristics.map(&:name)
   end
   
   should "tell you what characteristics are unknown" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
-    assert_equal [:model], a.unknown_characteristics
+    assert_equal [:model, :variant], a.unknown_characteristics.map(&:name)
+  end
+  
+  should "present a concise set of known characteristics by getting rid of those that have been trumped" do
+    a = SimpleAutomobile.new
+    a.make = 'Ford'
+    a.model = 'Taurus'
+    a.variant = 'Taurus V6 DOHC'
+    assert_equal [:make, :variant], a.known_characteristics.map(&:name)
+  end
+  
+  should "not mention a characteristic as unknown if, in fact, it has been trumped" do
+    a = SimpleAutomobile.new
+    a.make = 'Ford'
+    a.variant = 'Taurus V6 DOHC'
+    assert_equal [], a.unknown_characteristics.map(&:name)
+  end
+  
+  should "not mention a characteristic as unknown if it is waiting on something else to be revealed" do
+    a = Automobile.new
+    assert !a.unknown_characteristics.map(&:name).include?(:model_year)
+  end
+  
+  should "make sure that trumping works even within revealed characteristics" do
+    a = Automobile.new
+    assert a.unknown_characteristics.map(&:name).include?(:size_class)
+    a.make = 'Ford'
+    a.model_year = 1999
+    a.model = 'Taurus'
+    a.size_class = 'mid-size'
+    assert_equal [:model, :model_year, :make], a.known_characteristics.map(&:name)
+    assert !a.unknown_characteristics.map(&:name).include?(:size_class)
   end
 end
