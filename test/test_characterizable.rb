@@ -2,7 +2,8 @@ require 'helper'
 
 # TODO
 class Automobile
-  attr_accessor :make, :model_year, :model, :variant, :size_class, :hybridity
+  attr_accessor :make, :model_year, :model, :variant, :size_class, :hybridity, :daily_distance_estimate
+  attr_accessor :record_creation_date
   include Characterizable
   characterize do
     has :make do |make|
@@ -12,12 +13,13 @@ class Automobile
         end
       end
     end
+    has :record_creation_date, :hidden => true
     has :size_class
     # has :fuel_type
     # has :fuel_efficiency, :trumps => [:urbanity, :hybridity], :measures => :length_per_volume
     # has :urbanity, :measures => :percentage
     has :hybridity
-    # has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
+    has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
     # has :daily_duration, :trumps => [:annual_distance_estimate, :weekly_distance_estimate, :daily_distance_estimate], :measures => :time #, :weekly_fuel_cost, :annual_fuel_cost]
     # has :weekly_distance_estimate, :trumps => [:annual_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
     # has :annual_distance_estimate, :trumps => [:weekly_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
@@ -100,5 +102,22 @@ class TestCharacterizable < Test::Unit::TestCase
     a.model_year = 1999
     a.make = nil
     assert_equal nil, a.model_year
+  end
+  
+  should "keep user-defined options on a characteristic" do
+    assert_equal :length, Automobile.characteristics[:daily_distance_estimate].options[:measures]
+  end
+  
+  should "not confuse user-defined options with other options" do
+    assert !Automobile.characteristics[:daily_distance_estimate].options.has_key?(:trumps)
+  end
+  
+  should "know which characteristics are 'visible'" do
+    a = Automobile.new
+    assert a.unknown_characteristics.map(&:name).include?(:record_creation_date)
+    assert !a.visible_unknown_characteristics.map(&:name).include?(:record_creation_date)
+    a.record_creation_date = 'yesterday'
+    assert a.known_characteristics.map(&:name).include?(:record_creation_date)
+    assert !a.visible_known_characteristics.map(&:name).include?(:record_creation_date)
   end
 end

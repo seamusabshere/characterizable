@@ -6,6 +6,7 @@ require 'active_support/version'
   active_support/core_ext/object/blank
   active_support/core_ext/array/wrap
   active_support/core_ext/module/aliasing
+  active_support/core_ext/module/delegation
 }.each do |active_support_3_requirement|
   require active_support_3_requirement
 end if ActiveSupport::VERSION::MAJOR == 3
@@ -28,11 +29,20 @@ module Characterizable
     end
   end
   
+  def visible_known_characteristics
+    known_characteristics.reject { |c| c.hidden? }
+  end
+  
+  def visible_unknown_characteristics
+    unknown_characteristics.reject { |c| c.hidden? }
+  end
+  
   module ClassMethods
     def characterize(&block)
       self.characterizable_base = Characterizable::Base.new self
       Blockenspiel.invoke block, characterizable_base
     end
+    delegate :characteristics, :to => :characterizable_base
   end
   
   # don't want to use a Hash, because that would be annoying to select from
@@ -66,13 +76,18 @@ module Characterizable
     attr_reader :name
     attr_reader :trumps
     attr_reader :prerequisite
+    attr_reader :hidden
+    attr_reader :options
     def initialize(base, name, options = {}, &block)
       @base = base
       @name = name.to_sym
-      @trumps = Array.wrap(options[:trumps])
-      @prerequisite = options[:prerequisite]
+      @trumps = Array.wrap(options.delete(:trumps))
+      @prerequisite = options.delete :prerequisite
+      @hidden = options.delete :hidden
+      @options = options
       Blockenspiel.invoke block, self if block_given?
     end
+    delegate :characteristics, :to => :base
     def unknown?(obj)
       obj.send(name).nil?
     end
@@ -80,13 +95,16 @@ module Characterizable
       not unknown?(obj)
     end
     def trumped?(obj)
-      base.characteristics.any? do |c|
+      characteristics.any? do |c|
         c.known?(obj) and c.trumps.include?(name)
       end
     end
     def requited?(obj)
       return true if prerequisite.nil?
-      base.characteristics[prerequisite].known? obj
+      characteristics[prerequisite].known? obj
+    end
+    def hidden?
+      hidden
     end
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)
