@@ -17,15 +17,23 @@ module Characterizable
     klass.extend ClassMethods
   end
   
+  def characteristics
+    @_characteristics ||= ArrayOfBoundCharacteristics.new self
+  end
+  
+  def clear_characteristics
+    @_characteristics = nil
+  end
+
   def known_characteristics
-    characterizable_base.characteristics.select do |c|
-      c.known?(self) and not c.trumped?(self)
+    characteristics.select do |c|
+      c.known? and not c.trumped?
     end
   end
   
   def unknown_characteristics
-    characterizable_base.characteristics.select do |c|
-      c.unknown?(self) and c.requited?(self) and not c.trumped?(self)
+    characteristics.select do |c|
+      c.unknown? and c.requited? and not c.trumped?
     end
   end
   
@@ -57,6 +65,22 @@ module Characterizable
     end
   end
   
+  class ArrayOfBoundCharacteristics < ArrayOfCharacteristics
+    attr_reader :bound_obj
+    def initialize(*args)
+      @bound_obj = args.pop
+      super
+      load_bound_characteristics
+    end
+    def load_bound_characteristics
+      bound_obj.characterizable_base.characteristics.each do |c|
+        b_c = c.dup
+        b_c.bound_obj = bound_obj
+        push b_c
+      end
+    end
+  end
+  
   class Base
     attr_reader :klass
     def initialize(klass)
@@ -72,6 +96,8 @@ module Characterizable
   end
   
   class Characteristic
+    class TreatedBoundAsUnbound < RuntimeError; end
+    class TreatedUnboundAsBound < RuntimeError; end
     attr_reader :base
     attr_reader :name
     attr_reader :trumps
@@ -88,20 +114,29 @@ module Characterizable
       Blockenspiel.invoke block, self if block_given?
     end
     delegate :characteristics, :to => :base
-    def unknown?(obj)
-      obj.send(name).nil?
+    attr_accessor :bound_obj
+    def effective_obj(obj = nil)
+      raise TreatedBoundAsUnbound, "Can't treat as unbound if bound object is set" if obj and bound_obj
+      raise TreatedUnboundAsBound, "Need an object if unbound" unless obj or bound_obj
+      obj || bound_obj
     end
-    def known?(obj)
+    def value(obj = nil)
+      effective_obj(obj).send name
+    end
+    def unknown?(obj = nil)
+      value(obj).nil?
+    end
+    def known?(obj = nil)
       not unknown?(obj)
     end
-    def trumped?(obj)
-      characteristics.any? do |c|
+    def trumped?(obj = nil)
+      effective_obj(obj).characteristics.any? do |c|
         c.known?(obj) and c.trumps.include?(name)
       end
     end
-    def requited?(obj)
+    def requited?(obj = nil)
       return true if prerequisite.nil?
-      characteristics[prerequisite].known? obj
+      effective_obj(obj).characteristics[prerequisite].known? obj
     end
     def hidden?
       hidden

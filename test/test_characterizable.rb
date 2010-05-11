@@ -120,4 +120,44 @@ class TestCharacterizable < Test::Unit::TestCase
     assert a.known_characteristics.map(&:name).include?(:record_creation_date)
     assert !a.visible_known_characteristics.map(&:name).include?(:record_creation_date)
   end
+  
+  should "be able to access values" do
+    a = Automobile.new
+    a.make = 'Ford'
+    b = Automobile.new
+    b.make = 'Pontiac'
+    assert_equal 'Ford', Automobile.characteristics[:make].value(a)
+    assert_equal 'Pontiac', Automobile.characteristics[:make].value(b)
+  end
+  
+  should "give back characteristics with values when accessed from an instance" do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal 'Ford', a.characteristics[:make].value
+  end
+  
+  should "not allow treating [unbound] characteristics like bound ones" do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_raises(Characterizable::Characteristic::TreatedUnboundAsBound) do
+      Automobile.characteristics[:make].value
+    end
+  end
+  
+  should "not allow treating bound characteristics like unbound ones" do
+    a = Automobile.new
+    a.make = 'Ford'
+    b = Automobile.new
+    b.make = 'Pontiac'
+    assert_raises(Characterizable::Characteristic::TreatedBoundAsUnbound) do
+      a.characteristics[:make].value :anything
+    end
+  end
+  
+  should "eagely populate bound characteristics" do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal ['Ford'], a.known_characteristics.map(&:value)
+    assert_equal [:make], a.known_characteristics.map(&:name)
+  end
 end
