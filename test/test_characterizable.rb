@@ -96,12 +96,13 @@ class TestCharacterizable < Test::Unit::TestCase
     assert !a.unknown_characteristics.map(&:name).include?(:size_class)
   end
 
-  should "enforce prerequisites by using an object's setter" do
+  should "not enforce prerequisites by using an object's setter" do
     a = Automobile.new
     a.make = 'Ford'
     a.model_year = 1999
     a.make = nil
-    assert_equal nil, a.model_year
+    assert_equal 1999, a.model_year
+    assert !a.known_characteristics.map(&:value).include?(1999)
   end
   
   should "keep user-defined options on a characteristic" do

@@ -27,7 +27,7 @@ module Characterizable
 
   def known_characteristics
     characteristics.select do |c|
-      c.known? and not c.trumped?
+      c.known? and c.requited? and not c.trumped?
     end
   end
   
@@ -144,15 +144,6 @@ module Characterizable
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)
       base.has other_name, other_options.merge(:prerequisite => name), &block
-      base.klass.module_eval %{
-        def #{name}_with_dependent_#{other_name}=(new_#{name})
-          if new_#{name}.nil?
-            self.#{other_name} = nil
-          end
-          self.#{name}_without_dependent_#{other_name} = new_#{name}
-        end
-        alias_method_chain :#{name}=, :dependent_#{other_name}
-      }, __FILE__, __LINE__
     end
   end
 end
