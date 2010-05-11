@@ -50,19 +50,19 @@ class TestCharacterizable < Test::Unit::TestCase
       end
     end
   end
-  
+
   should "tell you what characteristics are known" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
     assert_equal [:make], a.known_characteristics.map(&:name)
   end
-  
+
   should "tell you what characteristics are unknown" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
     assert_equal [:model, :variant], a.unknown_characteristics.map(&:name)
   end
-  
+
   should "present a concise set of known characteristics by getting rid of those that have been trumped" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
@@ -70,19 +70,19 @@ class TestCharacterizable < Test::Unit::TestCase
     a.variant = 'Taurus V6 DOHC'
     assert_equal [:make, :variant], a.known_characteristics.map(&:name)
   end
-  
+
   should "not mention a characteristic as unknown if, in fact, it has been trumped" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
     a.variant = 'Taurus V6 DOHC'
     assert_equal [], a.unknown_characteristics.map(&:name)
   end
-  
+
   should "not mention a characteristic as unknown if it is waiting on something else to be revealed" do
     a = Automobile.new
     assert !a.unknown_characteristics.map(&:name).include?(:model_year)
   end
-  
+
   should "make sure that trumping works even within revealed characteristics" do
     a = Automobile.new
     assert a.unknown_characteristics.map(&:name).include?(:size_class)
@@ -92,5 +92,13 @@ class TestCharacterizable < Test::Unit::TestCase
     a.size_class = 'mid-size'
     assert_equal [:model, :model_year, :make], a.known_characteristics.map(&:name)
     assert !a.unknown_characteristics.map(&:name).include?(:size_class)
+  end
+
+  should "enforce prerequisites by using an object's setter" do
+    a = Automobile.new
+    a.make = 'Ford'
+    a.model_year = 1999
+    a.make = nil
+    assert_equal nil, a.model_year
   end
 end
