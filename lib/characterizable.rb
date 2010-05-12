@@ -1,3 +1,4 @@
+require 'set'
 require 'blockenspiel'
 require 'active_support'
 require 'active_support/version'
@@ -18,31 +19,80 @@ module Characterizable
   end
   
   def characteristics
-    @_characteristics ||= ArrayOfBoundCharacteristics.new self
+    @_characteristics ||= Snapshot.new self
   end
   
-  def clear_characteristics
+  def dirty_characteristics!
     @_characteristics = nil
   end
-
-  def known_characteristics
-    characteristics.select do |c|
-      c.known? and c.requited? and not c.trumped?
+  
+  # hashes that survive as such when you select/reject/slice them
+  class SurvivorHash < Hash
+    attr_reader :survivor_args
+    def initialize(*survivor_args)
+      @survivor_args = survivor_args
+    end
+    def reject(&block)
+      inject(self.class.new(*survivor_args)) do |memo, ary|
+        unless block.call(*ary)
+          memo[ary[0]] = ary[1]
+        end
+        memo
+      end
+    end
+    def select(&block)
+      inject(self.class.new(*survivor_args)) do |memo, ary|
+        if block.call(*ary)
+          memo[ary[0]] = ary[1]
+        end
+        memo
+      end
+    end
+    def slice(*keys)
+      inject(self.class.new(*survivor_args)) do |memo, ary|
+        if keys.include?(ary[0])
+          memo[ary[0]] = ary[1]
+        end
+        memo
+      end
     end
   end
   
-  def unknown_characteristics
-    characteristics.select do |c|
-      c.unknown? and c.requited? and not c.trumped?
+  class Snapshot < SurvivorHash
+    def initialize(*survivor_args)
+      super
+      take_snapshot
     end
-  end
-  
-  def visible_known_characteristics
-    known_characteristics.reject { |c| c.hidden? }
-  end
-  
-  def visible_unknown_characteristics
-    unknown_characteristics.reject { |c| c.hidden? }
+    def snapshotted_obj
+      survivor_args.first
+    end
+    def []=(key, value)
+      snapshotted_obj.dirty_characteristics!
+      super
+    end
+    def take_snapshot
+      snapshotted_obj.characterizable_base.characteristics.each do |k, c|
+        if c.known?(snapshotted_obj) and c.requited?(snapshotted_obj) and not c.trumped?(snapshotted_obj)
+          self[k] = snapshotted_obj.send c.name
+        end
+      end
+    end
+    def known
+      snapshotted_obj.characterizable_base.characteristics.select do |_, c|
+        c.known?(self) and c.requited?(self) and not c.trumped?(self)
+      end
+    end
+    def unknown
+      snapshotted_obj.characterizable_base.characteristics.select do |_, c|
+        c.unknown?(self) and c.requited?(self) and not c.trumped?(self)
+      end
+    end
+    def visible_known
+      known.reject { |_, c| c.hidden? }
+    end
+    def visible_unknown
+      unknown.reject { |_, c| c.hidden? }
+    end
   end
   
   module ClassMethods
@@ -53,51 +103,28 @@ module Characterizable
     delegate :characteristics, :to => :characterizable_base
   end
   
-  # don't want to use a Hash, because that would be annoying to select from
-  class ArrayOfCharacteristics < Array
-    def [](key_or_index)
-      case key_or_index
-      when String, Symbol
-        detect { |c| c.name == key_or_index }
-      else
-        super
-      end
-    end
-  end
-  
-  class ArrayOfBoundCharacteristics < ArrayOfCharacteristics
-    attr_reader :bound_obj
-    def initialize(*args)
-      @bound_obj = args.pop
-      super
-      load_bound_characteristics
-    end
-    def load_bound_characteristics
-      bound_obj.characterizable_base.characteristics.each do |c|
-        b_c = c.dup
-        b_c.bound_obj = bound_obj
-        push b_c
-      end
-    end
-  end
-  
   class Base
     attr_reader :klass
     def initialize(klass)
       @klass = klass
     end
     def characteristics
-      @_characteristics ||= ArrayOfCharacteristics.new
+      @_characteristics ||= SurvivorHash.new
     end
     include Blockenspiel::DSL
     def has(name, options = {}, &block)
-      characteristics.push Characteristic.new(self, name, options, &block)
+      characteristics[name] = Characteristic.new(self, name, options, &block)
+      klass.module_eval(%{
+        def #{name}_with_dirty_characteristics=(new_#{name})
+          dirty_characteristics!
+          self.#{name}_without_dirty_characteristics = new_#{name}
+        end
+        alias_method_chain :#{name}=, :dirty_characteristics
+      }, __FILE__, __LINE__) if klass.instance_methods.include?("#{name}=")
     end
   end
   
   class Characteristic
-    class TreatedBoundAsUnbound < RuntimeError; end
-    class TreatedUnboundAsBound < RuntimeError; end
     attr_reader :base
     attr_reader :name
     attr_reader :trumps
@@ -106,7 +133,7 @@ module Characterizable
     attr_reader :options
     def initialize(base, name, options = {}, &block)
       @base = base
-      @name = name.to_sym
+      @name = name
       @trumps = Array.wrap(options.delete(:trumps))
       @prerequisite = options.delete :prerequisite
       @hidden = options.delete :hidden
@@ -114,29 +141,28 @@ module Characterizable
       Blockenspiel.invoke block, self if block_given?
     end
     delegate :characteristics, :to => :base
-    attr_accessor :bound_obj
-    def effective_obj(obj = nil)
-      raise TreatedBoundAsUnbound, "Can't treat as unbound if bound object is set" if obj and bound_obj
-      raise TreatedUnboundAsBound, "Need an object if unbound" unless obj or bound_obj
-      obj || bound_obj
+    def value(obj)
+      case obj
+      when Hash
+        obj[name]
+      else
+        obj.send name
+      end
     end
-    def value(obj = nil)
-      effective_obj(obj).send name
-    end
-    def unknown?(obj = nil)
+    def unknown?(obj)
       value(obj).nil?
     end
-    def known?(obj = nil)
+    def known?(obj)
       not unknown?(obj)
     end
-    def trumped?(obj = nil)
-      effective_obj(obj).characteristics.any? do |c|
+    def trumped?(obj)
+      characteristics.any? do |_, c|
         c.known?(obj) and c.trumps.include?(name)
       end
     end
-    def requited?(obj = nil)
+    def requited?(obj)
       return true if prerequisite.nil?
-      effective_obj(obj).characteristics[prerequisite].known? obj
+      characteristics[prerequisite].known? obj
     end
     def hidden?
       hidden
