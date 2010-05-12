@@ -64,25 +64,25 @@ module Characterizable
       super
       take_snapshot
     end
-    def target_obj
+    def target
       survivor_args.first
     end
     def []=(key, value)
-      target_obj.expire_snapshot!
+      target.expire_snapshot!
       super
     end
     def take_snapshot
-      target_obj.characterizable_base.characteristics.each do |_, c|
-        if c.relevant?(target_obj)
-          self[c.name] = c.value(target_obj)
+      target.characterizable_base.characteristics.each do |_, c|
+        if c.relevant?(target)
+          self[c.name] = c.value(target)
         end
       end
     end
     def relevant
-      target_obj.characterizable_base.characteristics.select { |_, c| c.relevant?(self) }
+      target.characterizable_base.characteristics.select { |_, c| c.relevant?(self) }
     end
     def irrelevant
-      target_obj.characterizable_base.characteristics.select { |_, c| c.irrelevant?(self) }
+      target.characterizable_base.characteristics.select { |_, c| c.irrelevant?(self) }
     end
   end
   
@@ -114,7 +114,6 @@ module Characterizable
       }, __FILE__, __LINE__) if klass.instance_methods.include?("#{name}=")
     end
   end
-  
   class Characteristic
     attr_reader :base
     attr_reader :name
@@ -124,34 +123,38 @@ module Characterizable
     def initialize(base, name, options = {}, &block)
       @base = base
       @name = name
-      @trumps = Array.wrap(options.delete(:trumps))
-      @prerequisite = options.delete :prerequisite
+      @trumps = Array.wrap options.delete(:trumps)
+      @prerequisite = options.delete(:prerequisite)
       @options = options
       Blockenspiel.invoke block, self if block_given?
     end
+    def trumped_by
+      @_trumped_by ||= characteristics.select { |_, c| c.trumps.include? name }
+    end
     delegate :characteristics, :to => :base
-    def value(obj)
-      case obj
+    def value(target)
+      case target
       when Hash
-        obj[name]
+        target[name]
       else
-        obj.send name if obj.respond_to?(name)
+        target.send name if target.respond_to?(name)
       end
     end
-    def irrelevant?(obj)
-      value(obj).nil? and requited?(obj) and not trumped?(obj)
+    def irrelevant?(target)
+      value(target).nil? and revealed? target and untrumped? target
     end
-    def relevant?(obj)
-      !value(obj).nil? and requited?(obj) and not trumped?(obj)
+    def relevant?(target)
+      !value(target).nil? and revealed? target and untrumped? target
     end
-    def trumped?(obj)
-      characteristics.any? do |_, c|
-        !c.value(obj).nil? and c.trumps.include?(name)
+    def untrumped?(target)
+      return true if trumped_by.empty?
+      trumped_by.none? do |_, c|
+        c.relevant? target
       end
     end
-    def requited?(obj)
+    def revealed?(target)
       return true if prerequisite.nil?
-      !characteristics[prerequisite].value(obj).nil?
+      characteristics[prerequisite].relevant? target
     end
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)

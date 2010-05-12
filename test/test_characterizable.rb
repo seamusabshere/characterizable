@@ -211,4 +211,52 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_same_contents [:daily_distance_oracle_estimate], snapshot.relevant.keys
     assert_same_contents [:daily_distance_estimate], a.characteristics.relevant.keys
   end
+
+  # has :make do |make|
+  #   make.reveals :model_year do |model_year|
+  #     model_year.reveals :model, :trumps => :size_class do |model|
+  #       model.reveals :variant, :trumps => :hybridity
+  should "handle revelations on multiple levels" do
+    a = Automobile.new
+    a.make = 'Ford'
+    a.model_year = 1999
+    a.model = 'Taurus'
+    a.variant = 'Taurus 1999'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.make = nil
+    assert_same_contents [], a.characteristics.relevant.keys
+    a.make = 'Ford'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.model_year = nil
+    assert_same_contents [:make], a.characteristics.relevant.keys
+    a.model_year = 1999
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.model = nil
+    assert_same_contents [:make, :model_year], a.characteristics.relevant.keys
+    a.model = 'Taurus'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.variant = nil
+    assert_same_contents [:make, :model_year, :model], a.characteristics.relevant.keys
+  end
+  
+  should "handle trumping on multiple levels" do
+    a = Automobile.new
+    a.size_class = 'small' # can be trumped by model
+    a.hybridity = 'no' # can be trumped by variant
+    a.make = 'Ford'
+    a.model_year = 1999
+    a.model = 'Taurus'
+    a.variant = 'Taurus 1999'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.variant = nil
+    assert_same_contents [:make, :model_year, :model, :hybridity], a.characteristics.relevant.keys
+    a.variant = 'Taurus 1999'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.model = nil # which reveals size class, but also hybridity!
+    assert_same_contents [:make, :model_year, :size_class, :hybridity], a.characteristics.relevant.keys
+    a.model = 'Taurus'
+    assert_same_contents [:make, :model_year, :model, :variant], a.characteristics.relevant.keys
+    a.make = nil
+    assert_same_contents [:size_class, :hybridity], a.characteristics.relevant.keys
+  end
 end
