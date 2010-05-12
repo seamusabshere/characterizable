@@ -22,11 +22,12 @@ module Characterizable
     @_characteristics ||= Snapshot.new self
   end
   
-  def dirty_characteristics!
+  def expire_snapshot!
     @_characteristics = nil
   end
   
   # hashes that survive as such when you select/reject/slice them
+  # they also keep arguments passed to them
   class SurvivorHash < Hash
     attr_reader :survivor_args
     def initialize(*survivor_args)
@@ -63,35 +64,25 @@ module Characterizable
       super
       take_snapshot
     end
-    def snapshotted_obj
+    def target_obj
       survivor_args.first
     end
     def []=(key, value)
-      snapshotted_obj.dirty_characteristics!
+      target_obj.expire_snapshot!
       super
     end
     def take_snapshot
-      snapshotted_obj.characterizable_base.characteristics.each do |k, c|
-        if c.known?(snapshotted_obj) and c.requited?(snapshotted_obj) and not c.trumped?(snapshotted_obj)
-          self[k] = snapshotted_obj.send c.name
+      target_obj.characterizable_base.characteristics.each do |_, c|
+        if c.relevant?(target_obj)
+          self[c.name] = c.value(target_obj)
         end
       end
     end
-    def known
-      snapshotted_obj.characterizable_base.characteristics.select do |_, c|
-        c.known?(self) and c.requited?(self) and not c.trumped?(self)
-      end
+    def relevant
+      target_obj.characterizable_base.characteristics.select { |_, c| c.relevant?(self) }
     end
-    def unknown
-      snapshotted_obj.characterizable_base.characteristics.select do |_, c|
-        c.unknown?(self) and c.requited?(self) and not c.trumped?(self)
-      end
-    end
-    def visible_known
-      known.reject { |_, c| c.hidden? }
-    end
-    def visible_unknown
-      unknown.reject { |_, c| c.hidden? }
+    def irrelevant
+      target_obj.characterizable_base.characteristics.select { |_, c| c.irrelevant?(self) }
     end
   end
   
@@ -115,11 +106,11 @@ module Characterizable
     def has(name, options = {}, &block)
       characteristics[name] = Characteristic.new(self, name, options, &block)
       klass.module_eval(%{
-        def #{name}_with_dirty_characteristics=(new_#{name})
-          dirty_characteristics!
-          self.#{name}_without_dirty_characteristics = new_#{name}
+        def #{name}_with_expire_snapshot=(new_#{name})
+          expire_snapshot!
+          self.#{name}_without_expire_snapshot = new_#{name}
         end
-        alias_method_chain :#{name}=, :dirty_characteristics
+        alias_method_chain :#{name}=, :expire_snapshot
       }, __FILE__, __LINE__) if klass.instance_methods.include?("#{name}=")
     end
   end
@@ -129,14 +120,12 @@ module Characterizable
     attr_reader :name
     attr_reader :trumps
     attr_reader :prerequisite
-    attr_reader :hidden
     attr_reader :options
     def initialize(base, name, options = {}, &block)
       @base = base
       @name = name
       @trumps = Array.wrap(options.delete(:trumps))
       @prerequisite = options.delete :prerequisite
-      @hidden = options.delete :hidden
       @options = options
       Blockenspiel.invoke block, self if block_given?
     end
@@ -146,26 +135,23 @@ module Characterizable
       when Hash
         obj[name]
       else
-        obj.send name
+        obj.send name if obj.respond_to?(name)
       end
     end
-    def unknown?(obj)
-      value(obj).nil?
+    def irrelevant?(obj)
+      value(obj).nil? and requited?(obj) and not trumped?(obj)
     end
-    def known?(obj)
-      not unknown?(obj)
+    def relevant?(obj)
+      !value(obj).nil? and requited?(obj) and not trumped?(obj)
     end
     def trumped?(obj)
       characteristics.any? do |_, c|
-        c.known?(obj) and c.trumps.include?(name)
+        !c.value(obj).nil? and c.trumps.include?(name)
       end
     end
     def requited?(obj)
       return true if prerequisite.nil?
-      characteristics[prerequisite].known? obj
-    end
-    def hidden?
-      hidden
+      !characteristics[prerequisite].value(obj).nil?
     end
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)

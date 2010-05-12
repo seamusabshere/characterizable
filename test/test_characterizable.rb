@@ -1,6 +1,11 @@
 require 'helper'
 
-# TODO
+class Characterizable::Characteristic
+  def hidden?
+    !!options[:hidden]
+  end
+end
+
 class Automobile
   attr_accessor :make, :model_year, :model, :variant, :size_class, :hybridity, :daily_distance_estimate
   attr_accessor :record_creation_date
@@ -20,6 +25,7 @@ class Automobile
     # has :urbanity, :measures => :percentage
     has :hybridity
     has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
+    has :daily_distance_oracle_estimate, :trumps => :daily_distance_estimate
     # has :daily_duration, :trumps => [:annual_distance_estimate, :weekly_distance_estimate, :daily_distance_estimate], :measures => :time #, :weekly_fuel_cost, :annual_fuel_cost]
     # has :weekly_distance_estimate, :trumps => [:annual_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
     # has :annual_distance_estimate, :trumps => [:weekly_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
@@ -61,10 +67,10 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.slice(:hello).class
     assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.merge({:hi => 'there'}).class
     
-    assert_equal Characterizable::SurvivorHash, a.characteristics.known.class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.known.select { false }.class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.known.slice(:hello).class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.known.merge({:hi => 'there'}).class
+    assert_equal Characterizable::SurvivorHash, a.characteristics.relevant.class
+    assert_equal Characterizable::SurvivorHash, a.characteristics.relevant.select { false }.class
+    assert_equal Characterizable::SurvivorHash, a.characteristics.relevant.slice(:hello).class
+    assert_equal Characterizable::SurvivorHash, a.characteristics.relevant.merge({:hi => 'there'}).class
 
     assert_equal Characterizable::Snapshot, a.characteristics.class
     assert_equal Characterizable::Snapshot, a.characteristics.select { false }.class
@@ -72,47 +78,47 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal Characterizable::Snapshot, a.characteristics.merge({:hi => 'there'}).class
   end
   
-  should "tell you what characteristics are known" do
+  should "tell you what characteristics are relevant" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
-    assert_equal [:make], a.characteristics.known.keys
+    assert_same_contents [:make], a.characteristics.relevant.keys
   end
 
-  should "tell you what characteristics are unknown" do
+  should "tell you what characteristics are irrelevant" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
-    assert_equal [:model, :variant], a.characteristics.unknown.keys
+    assert_same_contents [:model, :variant], a.characteristics.irrelevant.keys
   end
 
-  should "present a concise set of known characteristics by getting rid of those that have been trumped" do
+  should "present a concise set of relevant characteristics by getting rid of those that have been trumped" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
     a.model = 'Taurus'
     a.variant = 'Taurus V6 DOHC'
-    assert_equal [:make, :variant], a.characteristics.known.keys
+    assert_same_contents [:make, :variant], a.characteristics.relevant.keys
   end
 
-  should "not mention a characteristic as unknown if, in fact, it has been trumped" do
+  should "not mention a characteristic as irrelevant if, in fact, it has been trumped" do
     a = SimpleAutomobile.new
     a.make = 'Ford'
     a.variant = 'Taurus V6 DOHC'
-    assert_equal [], a.characteristics.unknown.keys
+    assert_same_contents [], a.characteristics.irrelevant.keys
   end
 
-  should "not mention a characteristic as unknown if it is waiting on something else to be revealed" do
+  should "not mention a characteristic as irrelevant if it is waiting on something else to be revealed" do
     a = Automobile.new
-    assert !a.characteristics.unknown.keys.include?(:model_year)
+    assert !a.characteristics.irrelevant.keys.include?(:model_year)
   end
 
   should "make sure that trumping works even within revealed characteristics" do
     a = Automobile.new
-    assert a.characteristics.unknown.keys.include?(:size_class)
+    assert a.characteristics.irrelevant.keys.include?(:size_class)
     a.make = 'Ford'
     a.model_year = 1999
     a.model = 'Taurus'
     a.size_class = 'mid-size'
-    assert_equal [:make, :model_year, :model], a.characteristics.known.keys
-    assert !a.characteristics.unknown.keys.include?(:size_class)
+    assert_same_contents [:make, :model_year, :model], a.characteristics.relevant.keys
+    assert !a.characteristics.irrelevant.keys.include?(:size_class)
   end
 
   should "not enforce prerequisites by using an object's setter" do
@@ -121,7 +127,7 @@ class TestCharacterizable < Test::Unit::TestCase
     a.model_year = 1999
     a.make = nil
     assert_equal 1999, a.model_year
-    assert_equal nil, a.characteristics.known[:model_year]
+    assert_equal nil, a.characteristics.relevant[:model_year]
   end
   
   should "keep user-defined options on a characteristic" do
@@ -132,13 +138,9 @@ class TestCharacterizable < Test::Unit::TestCase
     assert !Automobile.characteristics[:daily_distance_estimate].options.has_key?(:trumps)
   end
   
-  should "know which characteristics are 'visible'" do
-    a = Automobile.new
-    assert a.characteristics.unknown.keys.include?(:record_creation_date)
-    assert !a.characteristics.visible_unknown.keys.include?(:record_creation_date)
-    a.record_creation_date = 'yesterday'
-    assert a.characteristics.known.keys.include?(:record_creation_date)
-    assert !a.characteristics.visible_known.keys.include?(:record_creation_date)
+  should "allow the user to add custom functionality to characteristics" do
+    assert Automobile.characteristics[:record_creation_date].hidden?
+    assert !Automobile.characteristics[:daily_distance_estimate].hidden?
   end
     
   should "be able to access values" do
@@ -147,32 +149,32 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal 'Ford', a.characteristics[:make]
   end
   
-  should "know what is known on a snapshot" do
+  should "know what is relevant on a snapshot" do
     a = Automobile.new
     a.make = 'Ford'
-    assert_equal [:make], a.characteristics.known.keys
+    assert_same_contents [:make], a.characteristics.relevant.keys
   end
   
-  should "know what is unknown on a snapshot" do
+  should "know what is irrelevant on a snapshot" do
     a = Automobile.new
     a.make = 'Ford'
-    assert a.characteristics.unknown.keys.include?(:model_year)
+    assert a.characteristics.irrelevant.keys.include?(:model_year)
   end
   
-  should "not reveal unknown characteristics in snapshots" do
+  should "not reveal irrelevant characteristics in snapshots" do
     a = Automobile.new
     a.model_year = 1999
-    assert_equal [], a.characteristics.known.keys
+    assert_same_contents [], a.characteristics.relevant.keys
     assert_equal nil, a.characteristics[:model_year]
   end
   
-  should "not reveal unknown characteristics in snapshots, even if it was previously revealed" do
+  should "not reveal irrelevant characteristics in snapshots, even if it was previously revealed" do
     a = Automobile.new
     a.make = 'Ford'
     a.model_year = 1999
-    assert_equal [:make, :model_year], a.characteristics.known.keys
+    assert_same_contents [:make, :model_year], a.characteristics.relevant.keys
     a.make = nil
-    assert_equal [], a.characteristics.known.keys
+    assert_same_contents [], a.characteristics.relevant.keys
   end
   
   should "keep snapshots separately" do
@@ -180,24 +182,33 @@ class TestCharacterizable < Test::Unit::TestCase
     a.make = 'Ford'
     a.model_year = 1999
     snapshot = a.characteristics
-    assert_equal [:make, :model_year], snapshot.known.keys
+    assert_same_contents [:make, :model_year], snapshot.relevant.keys
     a.make = nil
-    assert_equal [], a.characteristics.known.keys
-    assert_equal [:make, :model_year], snapshot.known.keys
+    assert_same_contents [], a.characteristics.relevant.keys
+    assert_same_contents [:make, :model_year], snapshot.relevant.keys
   end
     
   should "work when passed around as a snapshot" do
     a = Automobile.new
     a.make = 'Ford'
     snapshot = a.characteristics
-    assert_equal [:make], snapshot.known.keys
-    assert snapshot.unknown.keys.include?(:model_year)
+    assert_same_contents [:make], snapshot.relevant.keys
+    assert snapshot.irrelevant.keys.include?(:model_year)
     snapshot[:model_year] = 1999
     assert_equal 1999, snapshot[:model_year]
-    assert_equal [:make, :model_year], snapshot.known.keys
-    assert !snapshot.unknown.keys.include?(:model_year)
+    assert_same_contents [:make, :model_year], snapshot.relevant.keys
+    assert !snapshot.irrelevant.keys.include?(:model_year)
     assert_equal nil, a.model_year
     assert_equal nil, a.characteristics[:model_year]
     assert_equal 1999, snapshot[:model_year]
+  end
+  
+  should "appreciate that sometimes characteristics just magically appear" do
+    a = Automobile.new
+    a.daily_distance_estimate = 15
+    snapshot = a.characteristics
+    snapshot[:daily_distance_oracle_estimate] = 20
+    assert_same_contents [:daily_distance_oracle_estimate], snapshot.relevant.keys
+    assert_same_contents [:daily_distance_estimate], a.characteristics.relevant.keys
   end
 end
