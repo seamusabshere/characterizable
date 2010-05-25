@@ -105,6 +105,7 @@ module Characterizable
     include Blockenspiel::DSL
     def has(name, options = {}, &block)
       characteristics[name] = Characteristic.new(self, name, options, &block)
+      klass.define_attribute_methods if klass.respond_to? :define_attribute_methods
       klass.module_eval(%{
         def #{name}_with_expire_snapshot=(new_#{name})
           expire_snapshot!
