@@ -105,9 +105,11 @@ module Characterizable
     include Blockenspiel::DSL
     def has(name, options = {}, &block)
       characteristics[name] = Characteristic.new(self, name, options, &block)
-      if klass.respond_to? :attribute_methods_generated? and !klass.attribute_methods_generated?
+      begin
         # quacks like an activemodel
-        klass.define_attribute_methods
+        klass.define_attribute_methods if klass.respond_to?(:attribute_methods_generated?) and !klass.attribute_methods_generated?
+      rescue
+        # for example, if a table doesn't exist... just ignore it
       end
       klass.module_eval(%{
         def #{name}_with_expire_snapshot=(new_#{name})
