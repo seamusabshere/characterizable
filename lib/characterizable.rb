@@ -64,6 +64,20 @@ module Characterizable
       super
       take_snapshot
     end
+    def take_snapshot
+      target.characterizable_base.characteristics.each do |_, c|
+        if c.known?(target)
+          if c.effective?(target)
+            self[c.name] = c.value(target)
+          elsif !c.untrumped?(target)
+            trumped_keys.push c.name
+          elsif !c.revealed?(target)
+            wasted_keys.push c.name
+            lacking_keys.push c.prerequisite
+          end
+        end
+      end
+    end
     def target
       survivor_args.first
     end
@@ -71,18 +85,29 @@ module Characterizable
       target.expire_snapshot!
       super
     end
-    def take_snapshot
-      target.characterizable_base.characteristics.each do |_, c|
-        if c.relevant?(target)
-          self[c.name] = c.value(target)
-        end
-      end
+    def wasted_keys
+      @wasted_keys ||= Array.new
     end
-    def relevant
-      target.characterizable_base.characteristics.select { |_, c| c.relevant?(self) }
+    def trumped_keys
+      @trumped_keys ||= Array.new
     end
-    def irrelevant
-      target.characterizable_base.characteristics.select { |_, c| c.irrelevant?(self) }
+    def lacking_keys
+      @lacking_keys ||= Array.new
+    end
+    def effective
+      target.characterizable_base.characteristics.select { |_, c| c.effective?(self) }
+    end
+    def potential
+      target.characterizable_base.characteristics.select { |_, c| c.potential?(self) }
+    end
+    def wasted
+      target.characterizable_base.characteristics.slice(*wasted_keys)
+    end
+    def lacking
+      target.characterizable_base.characteristics.slice(*(lacking_keys - wasted_keys))
+    end
+    def trumped
+      target.characterizable_base.characteristics.slice(*trumped_keys)
     end
   end
   
@@ -134,6 +159,9 @@ module Characterizable
       @options = options
       Blockenspiel.invoke block, self if block_given?
     end
+    def inspect
+      "<Characterizable::Characteristic name=#{name.inspect} trumps=#{trumps.inspect} prerequisite=#{prerequisite.inspect} options=#{options.inspect}>"
+    end
     def trumped_by
       @_trumped_by ||= characteristics.select { |_, c| c.trumps.include? name }
     end
@@ -146,21 +174,24 @@ module Characterizable
         target.send name if target.respond_to?(name)
       end
     end
-    def irrelevant?(target)
-      value(target).nil? and revealed? target and untrumped? target
+    def known?(target)
+      !value(target).nil?
     end
-    def relevant?(target)
-      !value(target).nil? and revealed? target and untrumped? target
+    def potential?(target)
+      !known?(target) and revealed? target and untrumped? target
+    end
+    def effective?(target)
+      known?(target) and revealed? target and untrumped? target
     end
     def untrumped?(target)
       return true if trumped_by.empty?
       trumped_by.none? do |_, c|
-        c.relevant? target
+        c.effective? target
       end
     end
     def revealed?(target)
       return true if prerequisite.nil?
-      characteristics[prerequisite].relevant? target
+      characteristics[prerequisite].effective? target
     end
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)
