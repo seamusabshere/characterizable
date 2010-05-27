@@ -105,6 +105,12 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_same_contents [], a.characteristics.potential.keys
   end
   
+  should "know what's next" do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal true, a.characteristics.potential.keys.include?(:model_year)
+  end
+  
   should "know what characteristics are wasted and why" do
     a = Automobile.new
     a.hybridity = 'Electric'
