@@ -73,9 +73,21 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal Characterizable::SurvivorHash, a.characteristics.effective.merge({:hi => 'there'}).class
 
     assert_equal Characterizable::Snapshot, a.characteristics.class
-    assert_equal Characterizable::Snapshot, a.characteristics.select { false }.class
-    assert_equal Characterizable::Snapshot, a.characteristics.slice(:hello).class
+    assert_equal Hash, a.characteristics.select { false }.class
+    assert_equal Hash, a.characteristics.slice(:hello).class
     assert_equal Characterizable::Snapshot, a.characteristics.merge({:hi => 'there'}).class
+  end
+  
+  should "not be annoying to work with characteristics on a particular instance" do
+    a = SimpleAutomobile.new
+    a.make = 'Nissan'
+    assert_same_contents [:make], a.characteristics.effective.keys
+    assert_same_contents [:make], a.characteristics.effective.select { true }.keys
+  end
+  
+  should "not be annoying to work with characteristics hashes on a class level" do
+    assert_same_contents [:make, :model, :variant], SimpleAutomobile.characteristics.keys
+    assert_same_contents [:make, :model, :variant], SimpleAutomobile.characteristics.select { true }.keys
   end
   
   should "tell you what characteristics are effective" do
@@ -323,5 +335,31 @@ class TestCharacterizable < Test::Unit::TestCase
     a.make = 'Ford'
     assert_equal({ :make => 'Ford' }, a.characteristics)
     assert_equal({}, a.characteristics.slice(:dummy))
+    assert_equal({ :make => 'Ford' }, a.characteristics.slice(:make))
   end
+  
+  should 'allow characterizations to be selected' do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal({ :make => 'Ford' }, a.characteristics.select { |k, v| k == :make })
+    assert_equal({}, a.characteristics.select { |k, v| k == :dummy })
+  end
+  
+  should 'allow characterizations to be rejected' do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal({ :make => 'Ford' }, a.characteristics.reject { |k, v| k == :dummy })
+    assert_equal({}, a.characteristics.reject { |k, v| k == :make })
+  end
+
+  should 'not reset snapshot after slicing' do
+    a = Automobile.new
+    a.make = 'Ford'
+    snapshot = a.characteristics.slice(:dummy)
+    assert_equal({}, snapshot)
+    a.make = 'Nissan'
+    assert_equal({}, snapshot)
+    assert_equal({}, snapshot.slice(:make))
+  end
+  
 end

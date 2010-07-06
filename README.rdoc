@@ -4,6 +4,58 @@
 
 http://tinyurl.com/28tcrw2
 
+== What is a SurvivorHash?
+
+It just brings some Ruby 1.9 behavior to Ruby 1.8 hashes... (from http://webonrails.com/2009/02/06/ruby-191-hash)
+
+    RUBY_VERSION => 1.8.6
+    >> hash = {:a=> 1, :b=>2, :c=>3, :d=>4}
+    => {:b=>2, :c=>3, :d=>4, :a=>1}
+    >> hash.select{|k,v| k == :c }
+    => [[:c, 3]]
+
+    RUBY_VERSION => 1.9.1
+    >> hash = {:a=> 1, :b=>2, :c=>3, :d=>4}
+    => {:a=>1, :b=>2, :c=>3, :d=>4}
+    >> hash.select{|k,v| k == :c }
+    => {:c=>3}
+
+I hope these two tests show the value of SurvivorHash in the context of this gem...
+
+    should "not be annoying to work with characteristics on a particular instance" do
+      a = SimpleAutomobile.new
+      a.make = 'Nissan'
+      assert_same_contents [:make], a.characteristics.effective.keys
+      assert_same_contents [:make], a.characteristics.effective.select { true }.keys
+    end
+
+    should "not be annoying to work with characteristics hashes on a class level"
+      assert_same_contents [:make, :model, :variant], SimpleAutomobile.characteristics.keys
+      assert_same_contents [:make, :model, :variant], SimpleAutomobile.characteristics.select { true }.keys
+    end
+
+If you didn't have SurvivorHash, you wouldn't be able to call <tt>#keys</tt> because in Ruby 1.8 <tt>Hash#select</tt> (and <tt>#reject</tt>) gives you back an Array.
+
+== What is a Snapshot?
+
+It's a hash of the characteristics at a particular time...
+
+    should "keep snapshots separately" do
+      my_car = Automobile.new
+      my_car.make = 'Ford'
+      my_car.model_year = 1999
+      snapshot = my_car.characteristics
+      assert_same_contents [:make, :model_year], snapshot.effective.keys
+      my_car.make = nil
+      assert_same_contents [], my_car.characteristics.effective.keys           # up to date!
+      assert_same_contents [:make, :model_year], snapshot.effective.keys       # frozen in time!
+    end
+
+There are two important points here:
+
+* If you call <tt>my_car.characteristics</tt>, you will always get the most recent snapshot
+* If you save the output to a variable like <tt>snapshot</tt>, that snapshot won't change
+
 == Note on Patches/Pull Requests
  
 * Fork the project.

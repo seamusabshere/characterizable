@@ -3,6 +3,7 @@ require 'blockenspiel'
 require 'active_support'
 require 'active_support/version'
 %w{
+  active_support/core_ext/hash/slice
   active_support/core_ext/class/attribute_accessors
   active_support/core_ext/object/blank
   active_support/core_ext/array/wrap
@@ -79,11 +80,28 @@ module Characterizable
       end
     end
     def slice(*keep)
-      copy = self.class.new *survivor_args
-      copy.keys.each do |key|
-        copy.delete key unless keep.include? key
+      inject(Hash.new) do |memo, ary|
+        if keep.include?(ary[0])
+          memo[ary[0]] = ary[1]
+        end
+        memo
       end
-      copy
+    end
+    def select(&block)
+      inject(Hash.new) do |memo, ary|
+        if block.call(*ary)
+          memo[ary[0]] = ary[1]
+        end
+        memo
+      end
+    end
+    def reject(&block)
+      inject(Hash.new) do |memo, ary|
+        unless block.call(*ary)
+          memo[ary[0]] = ary[1]
+        end
+        memo
+      end
     end
     def target
       survivor_args.first
