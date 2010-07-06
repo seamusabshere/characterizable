@@ -315,6 +315,6 @@ class TestCharacterizable < Test::Unit::TestCase
         has :bar
       end
     end
-    assert_equal [:bar, :foo], Fickle.characteristics.keys.sort
+    assert_equal [:bar, :foo], Fickle.characteristics.keys.sort { |a, b| a.to_s <=> b.to_s }
   end
 end

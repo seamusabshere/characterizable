@@ -113,7 +113,7 @@ module Characterizable
   
   module ClassMethods
     def characterize(&block)
-      self.characterizable_base = Characterizable::Base.new self
+      self.characterizable_base ||= Characterizable::Base.new self
       Blockenspiel.invoke block, characterizable_base
     end
     delegate :characteristics, :to => :characterizable_base
