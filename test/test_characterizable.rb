@@ -304,4 +304,17 @@ class TestCharacterizable < Test::Unit::TestCase
     a.make = nil
     assert_same_contents [:size_class, :hybridity], a.characteristics.effective.keys
   end
+  
+  should "allow characterizations to be amended" do
+    class Fickle
+      include Characterizable
+      characterize do
+        has :foo
+      end
+      characterize do
+        has :bar
+      end
+    end
+    assert_equal [:bar, :foo], Fickle.characteristics.keys.sort
+  end
 end
