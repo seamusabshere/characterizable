@@ -317,4 +317,11 @@ class TestCharacterizable < Test::Unit::TestCase
     end
     assert_equal [:bar, :foo], Fickle.characteristics.keys.sort { |a, b| a.to_s <=> b.to_s }
   end
+  
+  should 'allow characterizations to be sliced' do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal({ :make => 'Ford' }, a.characteristics)
+    assert_equal({}, a.characteristics.slice(:dummy))
+  end
 end
