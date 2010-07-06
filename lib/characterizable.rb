@@ -27,45 +27,45 @@ module Characterizable
     @_characteristics = nil
   end
   
-  # hashes that survive as such when you select/reject/slice them
-  # they also keep arguments passed to them
-  class SurvivorHash < Hash
-    attr_reader :survivor_args
-    def initialize(*survivor_args)
-      @survivor_args = survivor_args
-    end
-    def reject(&block)
-      inject(self.class.new(*survivor_args)) do |memo, ary|
-        unless block.call(*ary)
-          memo[ary[0]] = ary[1]
+  class BetterHash < ::Hash
+    # In Ruby 1.9, running select/reject/etc. gives you back a hash
+    if RUBY_VERSION < '1.9'
+      def reject(&block)
+        inject(Characterizable::BetterHash.new) do |memo, ary|
+          unless block.call(*ary)
+            memo[ary[0]] = ary[1]
+          end
+          memo
         end
-        memo
       end
-    end
-    def select(&block)
-      inject(self.class.new(*survivor_args)) do |memo, ary|
-        if block.call(*ary)
-          memo[ary[0]] = ary[1]
+      def select(&block)
+        inject(Characterizable::BetterHash.new) do |memo, ary|
+          if block.call(*ary)
+            memo[ary[0]] = ary[1]
+          end
+          memo
         end
-        memo
       end
-    end
-    def slice(*keep)
-      inject(self.class.new(*survivor_args)) do |memo, ary|
-        if keep.include?(ary[0])
-          memo[ary[0]] = ary[1]
+      # I need this because otherwise it will try to do self.class.new on subclasses
+      # which would get "0 for 1" arguments error with Snapshot, among other things
+      def slice(*keep)
+        inject(Characterizable::BetterHash.new) do |memo, ary|
+          if keep.include?(ary[0])
+            memo[ary[0]] = ary[1]
+          end
+          memo
         end
-        memo
       end
     end
   end
   
-  class Snapshot < SurvivorHash
-    def initialize(*survivor_args)
-      super
-      take_snapshot
+  class Snapshot < BetterHash
+    attr_reader :target
+    def initialize(target)
+      @target = target
+      _take_snapshot
     end
-    def take_snapshot
+    def _take_snapshot
       target.characterizable_base.characteristics.each do |_, c|
         if c.known?(target)
           if c.effective?(target)
@@ -78,33 +78,6 @@ module Characterizable
           end
         end
       end
-    end
-    def slice(*keep)
-      inject(Hash.new) do |memo, ary|
-        if keep.include?(ary[0])
-          memo[ary[0]] = ary[1]
-        end
-        memo
-      end
-    end
-    def select(&block)
-      inject(Hash.new) do |memo, ary|
-        if block.call(*ary)
-          memo[ary[0]] = ary[1]
-        end
-        memo
-      end
-    end
-    def reject(&block)
-      inject(Hash.new) do |memo, ary|
-        unless block.call(*ary)
-          memo[ary[0]] = ary[1]
-        end
-        memo
-      end
-    end
-    def target
-      survivor_args.first
     end
     def []=(key, value)
       target.expire_snapshot!
@@ -150,7 +123,7 @@ module Characterizable
       @klass = klass
     end
     def characteristics
-      @_characteristics ||= SurvivorHash.new
+      @_characteristics ||= BetterHash.new
     end
     include Blockenspiel::DSL
     def has(name, options = {}, &block)

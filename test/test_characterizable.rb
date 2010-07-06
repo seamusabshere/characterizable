@@ -62,19 +62,20 @@ class TestCharacterizable < Test::Unit::TestCase
   should "survive as a certain kind of hash" do
     a = SimpleAutomobile.new
 
-    assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.class
-    assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.select { false }.class
-    assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.slice(:hello).class
-    assert_equal Characterizable::SurvivorHash, SimpleAutomobile.characteristics.merge({:hi => 'there'}).class
+    assert_equal Characterizable::BetterHash, SimpleAutomobile.characteristics.class
+    assert_equal Characterizable::BetterHash, SimpleAutomobile.characteristics.select { false }.class
+    assert_equal Characterizable::BetterHash, SimpleAutomobile.characteristics.slice(:hello).class
+    assert_equal Characterizable::BetterHash, SimpleAutomobile.characteristics.merge({:hi => 'there'}).class
     
-    assert_equal Characterizable::SurvivorHash, a.characteristics.effective.class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.effective.select { false }.class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.effective.slice(:hello).class
-    assert_equal Characterizable::SurvivorHash, a.characteristics.effective.merge({:hi => 'there'}).class
+    assert_equal Characterizable::BetterHash, a.characteristics.effective.class
+    assert_equal Characterizable::BetterHash, a.characteristics.effective.select { false }.class
+    assert_equal Characterizable::BetterHash, a.characteristics.effective.slice(:hello).class
+    assert_equal Characterizable::BetterHash, a.characteristics.effective.merge({:hi => 'there'}).class
+
+    assert_equal Characterizable::BetterHash, a.characteristics.select { false }.class
+    assert_equal Characterizable::BetterHash, a.characteristics.slice(:hello).class
 
     assert_equal Characterizable::Snapshot, a.characteristics.class
-    assert_equal Hash, a.characteristics.select { false }.class
-    assert_equal Hash, a.characteristics.slice(:hello).class
     assert_equal Characterizable::Snapshot, a.characteristics.merge({:hi => 'there'}).class
   end
   
@@ -241,8 +242,8 @@ class TestCharacterizable < Test::Unit::TestCase
     snapshot = a.characteristics
     assert_same_contents [:make, :model_year], snapshot.effective.keys
     a.make = nil
-    assert_same_contents [], a.characteristics.effective.keys
-    assert_same_contents [:make, :model_year], snapshot.effective.keys
+    assert_same_contents [], a.characteristics.effective.keys             # up to date!
+    assert_same_contents [:make, :model_year], snapshot.effective.keys    # frozen in time!
   end
     
   should "work when passed around as a snapshot" do

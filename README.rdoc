@@ -4,7 +4,7 @@
 
 http://tinyurl.com/28tcrw2
 
-== What is a SurvivorHash?
+== What is a BetterHash?
 
 It just brings some Ruby 1.9 behavior to Ruby 1.8 hashes... (from http://webonrails.com/2009/02/06/ruby-191-hash)
 
@@ -20,7 +20,7 @@ It just brings some Ruby 1.9 behavior to Ruby 1.8 hashes... (from http://webonra
     >> hash.select{|k,v| k == :c }
     => {:c=>3}
 
-I hope these two tests show the value of SurvivorHash in the context of this gem...
+I hope these two tests show the value of BetterHash in the context of this gem...
 
     should "not be annoying to work with characteristics on a particular instance" do
       a = SimpleAutomobile.new
@@ -34,7 +34,7 @@ I hope these two tests show the value of SurvivorHash in the context of this gem
       assert_same_contents [:make, :model, :variant], SimpleAutomobile.characteristics.select { true }.keys
     end
 
-If you didn't have SurvivorHash, you wouldn't be able to call <tt>#keys</tt> because in Ruby 1.8 <tt>Hash#select</tt> (and <tt>#reject</tt>) gives you back an Array.
+If you didn't have BetterHash, you wouldn't be able to call <tt>#keys</tt> because in Ruby 1.8 <tt>Hash#select</tt> (and <tt>#reject</tt>) gives you back an Array.
 
 == What is a Snapshot?
 
