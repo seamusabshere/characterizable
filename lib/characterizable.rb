@@ -49,9 +49,9 @@ module Characterizable
         memo
       end
     end
-    def slice(*keys)
+    def slice(*keep)
       inject(self.class.new(*survivor_args)) do |memo, ary|
-        if keys.include?(ary[0])
+        if keep.include?(ary[0])
           memo[ary[0]] = ary[1]
         end
         memo
@@ -77,6 +77,13 @@ module Characterizable
           end
         end
       end
+    end
+    def slice(*keep)
+      copy = self.class.new *survivor_args
+      copy.keys.each do |key|
+        copy.delete key unless keep.include? key
+      end
+      copy
     end
     def target
       survivor_args.first
