@@ -30,6 +30,9 @@ module Characterizable
   class BetterHash < ::Hash
     # In Ruby 1.9, running select/reject/etc. gives you back a hash
     if RUBY_VERSION < '1.9'
+      def to_hash
+        Hash.new.replace self
+      end
       def reject(&block)
         inject(Characterizable::BetterHash.new) do |memo, ary|
           unless block.call(*ary)

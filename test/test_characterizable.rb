@@ -363,4 +363,8 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal({}, snapshot.slice(:make))
   end
   
+  should 'allow a BetterHash to be turned into a normal Hash' do
+    assert_equal Hash, Characterizable::BetterHash.new.to_hash.class
+  end
+  
 end
