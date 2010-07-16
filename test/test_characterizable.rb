@@ -367,4 +367,15 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal Hash, Characterizable::BetterHash.new.to_hash.class
   end
   
+  should 'be nice to active_support to_json for characteristics (i.e. BetterHashes)' do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal "{\"make\":\"Ford\"}", a.characteristics.to_json
+  end
+  
+  should 'be nice to active_support to_json for snapshots' do
+    a = Automobile.new
+    a.make = 'Ford'
+    assert_equal "{\"make\":{\"trumps\":[],\"name\":\"make\",\"options\":{},\"prerequisite\":null}}", a.characteristics.effective.to_json
+  end
 end

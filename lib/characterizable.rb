@@ -9,9 +9,11 @@ require 'active_support/version'
   active_support/core_ext/array/wrap
   active_support/core_ext/module/aliasing
   active_support/core_ext/module/delegation
+  active_support/json
 }.each do |active_support_3_requirement|
   require active_support_3_requirement
 end if ActiveSupport::VERSION::MAJOR == 3
+require 'to_json_fix'
 
 module Characterizable
   def self.included(klass)
@@ -32,6 +34,9 @@ module Characterizable
     if RUBY_VERSION < '1.9'
       def to_hash
         Hash.new.replace self
+      end
+      def to_json(*)
+        to_hash.to_json
       end
       def reject(&block)
         inject(Characterizable::BetterHash.new) do |memo, ary|
@@ -159,6 +164,9 @@ module Characterizable
       @prerequisite = options.delete(:prerequisite)
       @options = options
       Blockenspiel.invoke block, self if block_given?
+    end
+    def to_json(*)
+      { :name => name, :trumps => trumps, :prerequisite => prerequisite, :options => options }.to_json
     end
     def inspect
       "<Characterizable::Characteristic name=#{name.inspect} trumps=#{trumps.inspect} prerequisite=#{prerequisite.inspect} options=#{options.inspect}>"
