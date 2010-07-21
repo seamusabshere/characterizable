@@ -9,11 +9,9 @@ require 'active_support/version'
   active_support/core_ext/array/wrap
   active_support/core_ext/module/aliasing
   active_support/core_ext/module/delegation
-  active_support/json
 }.each do |active_support_3_requirement|
   require active_support_3_requirement
 end if ActiveSupport::VERSION::MAJOR == 3
-require 'to_json_fix'
 
 module Characterizable
   def self.included(klass)
