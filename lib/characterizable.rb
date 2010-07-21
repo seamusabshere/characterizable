@@ -123,6 +123,9 @@ module Characterizable
     delegate :characteristics, :to => :characterizable_base
   end
   
+  class CharacteristicAlreadyDefined < ArgumentError
+  end
+  
   class Base
     attr_reader :klass
     def initialize(klass)
@@ -133,6 +136,7 @@ module Characterizable
     end
     include Blockenspiel::DSL
     def has(name, options = {}, &block)
+      raise CharacteristicAlreadyDefined, "The characteristic #{name} has already been defined on #{klass}!" if characteristics.has_key?(name)
       characteristics[name] = Characteristic.new(self, name, options, &block)
       begin
         # quacks like an activemodel

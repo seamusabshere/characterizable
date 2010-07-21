@@ -386,4 +386,28 @@ class TestCharacterizable < Test::Unit::TestCase
       a.characteristics.effective.to_json
     end
   end
+
+  should 'raise an exception if #has is called more than once in a single block' do
+    assert_raises ::Characterizable::CharacteristicAlreadyDefined do
+      class SimpleAutomobile3
+        include Characterizable
+        attr_accessor :make
+        characterize do
+          has :make
+          has :make
+        end
+      end
+    end
+  end
+  
+  should 'raise an exception if #has is called more than once in a subclass' do
+    assert_raises ::Characterizable::CharacteristicAlreadyDefined do
+      class SimpleAutomobile2 < SimpleAutomobile
+        include Characterizable
+        characterize do
+          has :make
+        end
+      end
+    end
+  end
 end
