@@ -74,14 +74,14 @@ module Characterizable
     def _take_snapshot
       target.characterizable_base.characteristics.each do |_, c|
         if c.known?(target)
-          if c.effective?(target)
+          #if c.effective?(target)
             self[c.name] = c.value(target)
-          elsif !c.untrumped?(target)
-            trumped_keys.push c.name
-          elsif !c.revealed?(target)
-            wasted_keys.push c.name
-            lacking_keys.push c.prerequisite
-          end
+          #elsif !c.untrumped?(target)
+          #  trumped_keys.push c.name
+          #elsif !c.revealed?(target)
+          #  wasted_keys.push c.name
+          #  lacking_keys.push c.prerequisite
+          #end
         end
       end
     end
