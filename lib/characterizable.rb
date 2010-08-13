@@ -99,7 +99,7 @@ module Characterizable
       @lacking_keys ||= Array.new
     end
     def effective
-      target.characterizable_base.characteristics.select { |_, c| c.effective?(self) }
+      target.characterizable_base.characteristics.select { |_, c| c.known?(self) }
     end
     def potential
       target.characterizable_base.characteristics.select { |_, c| c.potential?(self) }
