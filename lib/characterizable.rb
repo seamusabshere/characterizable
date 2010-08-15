@@ -175,7 +175,8 @@ module Characterizable
       "<Characterizable::Characteristic name=#{name.inspect} trumps=#{trumps.inspect} prerequisite=#{prerequisite.inspect} options=#{options.inspect}>"
     end
     def trumped_by
-      @_trumped_by ||= characteristics.select { |_, c| c.trumps.include? name }
+      characteristics.select { |_, c| c.trumps.include? name }
+    end
     def characteristics
       base.characteristics
     end
