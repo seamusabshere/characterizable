@@ -8,7 +8,6 @@ require 'active_support/version'
   active_support/core_ext/object/blank
   active_support/core_ext/array/wrap
   active_support/core_ext/module/aliasing
-  active_support/core_ext/module/delegation
 }.each do |active_support_3_requirement|
   require active_support_3_requirement
 end if ActiveSupport::VERSION::MAJOR == 3
@@ -120,7 +119,9 @@ module Characterizable
       self.characterizable_base ||= Characterizable::Base.new self
       Blockenspiel.invoke block, characterizable_base
     end
-    delegate :characteristics, :to => :characterizable_base
+    def characteristics
+      characterizable_base.characteristics
+    end
   end
   
   class CharacteristicAlreadyDefined < ArgumentError
@@ -175,8 +176,9 @@ module Characterizable
     end
     def trumped_by
       @_trumped_by ||= characteristics.select { |_, c| c.trumps.include? name }
+    def characteristics
+      base.characteristics
     end
-    delegate :characteristics, :to => :base
     def value(target)
       case target
       when Hash
