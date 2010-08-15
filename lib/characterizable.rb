@@ -65,19 +65,19 @@ module Characterizable
   end
   
   class Snapshot < BetterHash
-    attr_reader :target
-    def initialize(target)
-      @target = target
+    attr_reader :universe
+    def initialize(universe)
+      @universe = universe
       _take_snapshot
     end
     def _take_snapshot
-      target.characterizable_base.characteristics.each do |_, c|
-        if c.known?(target)
-          if c.effective?(target)
-            self[c.name] = c.value(target)
-          elsif c.trumped?(target)
+      universe.characterizable_base.characteristics.each do |_, c|
+        if c.known?(universe)
+          if c.effective?(universe)
+            self[c.name] = c.value(universe)
+          elsif c.trumped?(universe)
             trumped_keys.push c.name
-          elsif !c.revealed?(target)
+          elsif !c.revealed?(universe)
             wasted_keys.push c.name
             lacking_keys.push c.prerequisite
           end
@@ -85,7 +85,7 @@ module Characterizable
       end
     end
     def []=(key, value)
-      target.expire_snapshot!
+      universe.expire_snapshot!
       super
     end
     def wasted_keys
@@ -98,19 +98,19 @@ module Characterizable
       @lacking_keys ||= Array.new
     end
     def effective
-      target.characterizable_base.characteristics.select { |_, c| c.effective?(self) }
+      universe.characterizable_base.characteristics.select { |_, c| c.effective?(self) }
     end
     def potential
-      target.characterizable_base.characteristics.select { |_, c| c.potential?(self) }
+      universe.characterizable_base.characteristics.select { |_, c| c.potential?(self) }
     end
     def wasted
-      target.characterizable_base.characteristics.slice(*wasted_keys)
+      universe.characterizable_base.characteristics.slice(*wasted_keys)
     end
     def lacking
-      target.characterizable_base.characteristics.slice(*(lacking_keys - wasted_keys))
+      universe.characterizable_base.characteristics.slice(*(lacking_keys - wasted_keys))
     end
     def trumped
-      target.characterizable_base.characteristics.slice(*trumped_keys)
+      universe.characterizable_base.characteristics.slice(*trumped_keys)
     end
   end
   
@@ -177,39 +177,39 @@ module Characterizable
     def characteristics
       base.characteristics
     end
-    def value(target)
-      case target
+    def value(universe)
+      case universe
       when Hash
-        target[name]
+        universe[name]
       else
-        target.send name if target.respond_to?(name)
+        universe.send name if universe.respond_to?(name)
       end
     end
-    def known?(target)
-      not value(target).nil?
+    def known?(universe)
+      not value(universe).nil?
     end
-    def potential?(target)
-      not known?(target) and revealed? target and not trumped? target
+    def potential?(universe)
+      not known?(universe) and revealed? universe and not trumped? universe
     end
-    def effective?(target, ignoring = nil)
-      known?(target) and revealed? target and not trumped? target, ignoring
+    def effective?(universe, ignoring = nil)
+      known?(universe) and revealed? universe and not trumped? universe, ignoring
     end
-    def trumped?(target, ignoring = nil)
+    def trumped?(universe, ignoring = nil)
       characteristics.each do |_, other|
         if other.trumps.include? name and not ignoring == other.name
           if trumps.include? other.name
             # special case: mutual trumping. current characteristic is trumped if its friend is otherwise effective and it is not otherwise effective
-            return true if other.effective? target, name and not effective? target, other.name
+            return true if other.effective? universe, name and not effective? universe, other.name
           else
-            return true if other.effective? target
+            return true if other.effective? universe
           end
         end
       end
       false
     end
-    def revealed?(target)
+    def revealed?(universe)
       return true if prerequisite.nil?
-      characteristics[prerequisite].effective? target
+      characteristics[prerequisite].effective? universe
     end
     include Blockenspiel::DSL
     def reveals(other_name, other_options = {}, &block)
