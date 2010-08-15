@@ -410,4 +410,19 @@ class TestCharacterizable < Test::Unit::TestCase
       end
     end
   end
+
+  # this used to cause infinite loops
+  should 'not let two characteristics trump each other' do
+    assert_raises ::Characterizable::CyclicalTrumping do
+      class Universe
+        include Characterizable
+        attr_accessor :matter
+        attr_accessor :antimatter
+        characterize do
+          has :matter, :trumps => :antimatter
+          has :antimatter, :trumps => :matter
+        end
+      end
+    end
+  end
 end

@@ -73,14 +73,14 @@ module Characterizable
     def _take_snapshot
       target.characterizable_base.characteristics.each do |_, c|
         if c.known?(target)
-          #if c.effective?(target)
+          if c.effective?(target)
             self[c.name] = c.value(target)
-          #elsif !c.untrumped?(target)
-          #  trumped_keys.push c.name
-          #elsif !c.revealed?(target)
-          #  wasted_keys.push c.name
-          #  lacking_keys.push c.prerequisite
-          #end
+          elsif !c.untrumped?(target)
+            trumped_keys.push c.name
+          elsif !c.revealed?(target)
+            wasted_keys.push c.name
+            lacking_keys.push c.prerequisite
+          end
         end
       end
     end
@@ -98,7 +98,7 @@ module Characterizable
       @lacking_keys ||= Array.new
     end
     def effective
-      target.characterizable_base.characteristics.select { |_, c| c.known?(self) }
+      target.characterizable_base.characteristics.select { |_, c| c.effective?(self) }
     end
     def potential
       target.characterizable_base.characteristics.select { |_, c| c.potential?(self) }
@@ -125,6 +125,8 @@ module Characterizable
   end
   
   class CharacteristicAlreadyDefined < ArgumentError
+  end
+  class CyclicalTrumping < ArgumentError
   end
   
   class Base
@@ -167,6 +169,11 @@ module Characterizable
       @prerequisite = options.delete(:prerequisite)
       @options = options
       Blockenspiel.invoke block, self if block_given?
+      trumps.each do |trump|
+        if c = characteristics[trump] and c.trumps.include? name
+          raise CyclicalTrumping, "On #{base.klass}, '#{c.name}' and '#{name}' trump each other"
+        end
+      end
     end
     def to_json(*)
       { :name => name, :trumps => trumps, :prerequisite => prerequisite, :options => options }.to_json
