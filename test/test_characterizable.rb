@@ -2,7 +2,6 @@ require 'helper'
 
 # just to see if it hurts
 require 'active_support/json'
-require 'to_json_fix'
 
 class Characterizable::Characteristic
   def hidden?

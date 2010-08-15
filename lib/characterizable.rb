@@ -32,8 +32,8 @@ module Characterizable
       def to_hash
         Hash.new.replace self
       end
-      def to_json(*)
-        to_hash.to_json
+      def as_json(*)
+        to_hash
       end
       def reject(&block)
         inject(Characterizable::BetterHash.new) do |memo, ary|
@@ -175,8 +175,8 @@ module Characterizable
         end
       end
     end
-    def to_json(*)
-      { :name => name, :trumps => trumps, :prerequisite => prerequisite, :options => options }.to_json
+    def as_json(*)
+      { :name => name, :trumps => trumps, :prerequisite => prerequisite, :options => options }
     end
     def inspect
       "<Characterizable::Characteristic name=#{name.inspect} trumps=#{trumps.inspect} prerequisite=#{prerequisite.inspect} options=#{options.inspect}>"

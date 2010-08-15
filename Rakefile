@@ -12,7 +12,6 @@ begin
     gem.authors = ["Andy Rossmeissl", "Seamus Abshere"]
     gem.add_dependency 'blockenspiel', '>=0.3.2'
     gem.add_dependency 'activesupport', '>=2.3.5'
-    gem.add_development_dependency 'to_json_fix', '>=0.0.1'
     gem.add_development_dependency "shoulda", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
