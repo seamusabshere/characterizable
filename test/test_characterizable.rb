@@ -49,6 +49,16 @@ class SimpleAutomobile
   end
 end
 
+class Universe
+  include Characterizable
+  attr_accessor :matter
+  attr_accessor :antimatter
+  characterize do
+    has :matter, :trumps => :antimatter
+    has :antimatter, :trumps => :matter
+  end
+end
+
 class TestCharacterizable < Test::Unit::TestCase
   should "let you define the effective characteristics of a class" do
     assert_nothing_raised do
@@ -409,19 +419,31 @@ class TestCharacterizable < Test::Unit::TestCase
       end
     end
   end
-
-  # this used to cause infinite loops
-  should 'not let two characteristics trump each other' do
-    assert_raises ::Characterizable::CyclicalTrumping do
-      class Universe
-        include Characterizable
-        attr_accessor :matter
-        attr_accessor :antimatter
-        characterize do
-          has :matter, :trumps => :antimatter
-          has :antimatter, :trumps => :matter
-        end
-      end
-    end
+  
+  should "have mutual trumping cancel itself out instead of causing an infinite loop" do
+    a = Universe.new
+    assert_equal [], a.characteristics.effective.keys
+    assert_equal [:matter, :antimatter], a.characteristics.potential.keys
+    assert_equal [], a.characteristics.wasted.keys
+    assert_equal [], a.characteristics.lacking.keys
+    assert_equal [], a.characteristics.trumped.keys
+    a.matter = :foo
+    assert_equal [:matter], a.characteristics.effective.keys
+    assert_equal [], a.characteristics.potential.keys
+    assert_equal [], a.characteristics.wasted.keys
+    assert_equal [], a.characteristics.lacking.keys
+    assert_equal [], a.characteristics.trumped.keys
+    a.antimatter = :bar
+    assert_equal [:matter, :antimatter], a.characteristics.effective.keys
+    assert_equal [], a.characteristics.potential.keys
+    assert_equal [], a.characteristics.wasted.keys
+    assert_equal [], a.characteristics.lacking.keys
+    assert_equal [], a.characteristics.trumped.keys
+    a.matter = nil
+    assert_equal [:antimatter], a.characteristics.effective.keys
+    assert_equal [], a.characteristics.potential.keys
+    assert_equal [], a.characteristics.wasted.keys
+    assert_equal [], a.characteristics.lacking.keys
+    assert_equal [], a.characteristics.trumped.keys
   end
 end

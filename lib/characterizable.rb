@@ -75,7 +75,7 @@ module Characterizable
         if c.known?(target)
           if c.effective?(target)
             self[c.name] = c.value(target)
-          elsif !c.untrumped?(target)
+          elsif c.trumped?(target)
             trumped_keys.push c.name
           elsif !c.revealed?(target)
             wasted_keys.push c.name
@@ -126,8 +126,6 @@ module Characterizable
   
   class CharacteristicAlreadyDefined < ArgumentError
   end
-  class CyclicalTrumping < ArgumentError
-  end
   
   class Base
     attr_reader :klass
@@ -169,20 +167,12 @@ module Characterizable
       @prerequisite = options.delete(:prerequisite)
       @options = options
       Blockenspiel.invoke block, self if block_given?
-      trumps.each do |trump|
-        if c = characteristics[trump] and c.trumps.include? name
-          raise CyclicalTrumping, "On #{base.klass}, '#{c.name}' and '#{name}' trump each other"
-        end
-      end
     end
     def as_json(*)
       { :name => name, :trumps => trumps, :prerequisite => prerequisite, :options => options }
     end
     def inspect
       "<Characterizable::Characteristic name=#{name.inspect} trumps=#{trumps.inspect} prerequisite=#{prerequisite.inspect} options=#{options.inspect}>"
-    end
-    def trumped_by
-      characteristics.select { |_, c| c.trumps.include? name }
     end
     def characteristics
       base.characteristics
@@ -196,19 +186,26 @@ module Characterizable
       end
     end
     def known?(target)
-      !value(target).nil?
+      not value(target).nil?
     end
     def potential?(target)
-      !known?(target) and revealed? target and untrumped? target
+      not known?(target) and revealed? target and not trumped? target
     end
-    def effective?(target)
-      known?(target) and revealed? target and untrumped? target
+    def effective?(target, ignoring = nil)
+      known?(target) and revealed? target and not trumped? target, ignoring
     end
-    def untrumped?(target)
-      return true if trumped_by.empty?
-      trumped_by.none? do |_, c|
-        c.effective? target
+    def trumped?(target, ignoring = nil)
+      characteristics.each do |_, other|
+        if other.trumps.include? name and not ignoring == other.name
+          if trumps.include? other.name
+            # special case: mutual trumping. current characteristic is trumped if its friend is otherwise effective and it is not otherwise effective
+            return true if other.effective? target, name and not effective? target, other.name
+          else
+            return true if other.effective? target
+          end
+        end
       end
+      false
     end
     def revealed?(target)
       return true if prerequisite.nil?
