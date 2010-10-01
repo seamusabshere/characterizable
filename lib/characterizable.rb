@@ -28,7 +28,7 @@ module Characterizable
   
   class BetterHash < ::Hash
     # In Ruby 1.9, running select/reject/etc. gives you back a hash
-    if RUBY_VERSION < '1.9'
+    # if RUBY_VERSION < '1.9'
       def to_hash
         Hash.new.replace self
       end
@@ -61,7 +61,7 @@ module Characterizable
           memo
         end
       end
-    end
+    # end
   end
   
   class Snapshot < BetterHash
@@ -141,17 +141,20 @@ module Characterizable
       characteristics[name] = Characteristic.new(self, name, options, &block)
       begin
         # quacks like an activemodel
-        klass.define_attribute_methods if klass.respond_to?(:attribute_methods_generated?) and !klass.attribute_methods_generated?
+        klass.define_attribute_methods unless klass.respond_to?(:attribute_methods_generated?) and klass.attribute_methods_generated?
       rescue
         # for example, if a table doesn't exist... just ignore it
       end
-      klass.module_eval(%{
-        def #{name}_with_expire_snapshot=(new_#{name})
-          expire_snapshot!
-          self.#{name}_without_expire_snapshot = new_#{name}
-        end
-        alias_method_chain :#{name}=, :expire_snapshot
-      }, __FILE__, __LINE__) if klass.instance_methods.include?("#{name}=")
+      begin
+        klass.module_eval(%{
+          def #{name}_with_expire_snapshot=(new_#{name})
+            expire_snapshot!
+            self.#{name}_without_expire_snapshot = new_#{name}
+          end
+          alias_method_chain :#{name}=, :expire_snapshot
+        }, __FILE__, __LINE__) #if klass.instance_methods.include?("#{name}=")
+      rescue
+      end
     end
   end
   class Characteristic
