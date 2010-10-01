@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{characterizable}
-  s.version = "0.0.16"
+  s.version = "0.0.17"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Andy Rossmeissl", "Seamus Abshere"]
-  s.date = %q{2010-08-15}
+  s.date = %q{2010-09-30}
   s.description = %q{Characterize the relationship between "attributes" (getters/setters) of instances of a class}
   s.email = %q{seamus@abshere.net}
   s.extra_rdoc_files = [
