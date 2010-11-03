@@ -31,6 +31,11 @@ module Characterizable
   def expire_snapshot!
     @_characteristics = nil
   end
+
+  def display_characteristic(name)
+    characteristic = self.class.characteristics[name]
+    characteristic.display(characteristics) if characteristic
+  end
   
   module ClassMethods
     def characterize(&block)
@@ -42,6 +47,5 @@ module Characterizable
     end
   end
   
-  class CharacteristicAlreadyDefined < ArgumentError
-  end
+  class CharacteristicAlreadyDefined < ArgumentError; end
 end

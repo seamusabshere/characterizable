@@ -39,13 +39,14 @@ end
 
 class SimpleAutomobile
   include Characterizable
-  attr_accessor :make
-  attr_accessor :model
-  attr_accessor :variant
+  attr_accessor :make, :model, :variant
+
   characterize do
     has :make
-    has :model
-    has :variant, :trumps => :model
+    has :model, :display => lambda { |c| "Brand new #{c}" }
+    has :variant, :trumps => :model do
+      displays { |v| "Featuring #{v}" }
+    end
   end
 end
 
@@ -445,5 +446,13 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal [], a.characteristics.wasted.keys
     assert_equal [], a.characteristics.lacking.keys
     assert_equal [], a.characteristics.trumped.keys
+  end
+
+  should 'display custom formats' do
+    sa = SimpleAutomobile.new
+    sa.model = 'FIT'
+    assert_equal 'Brand new FIT', sa.display_characteristic(:model)
+    sa.variant = 'Extreme Edition'
+    assert_equal 'Featuring Extreme Edition', sa.display_characteristic(:variant)
   end
 end
