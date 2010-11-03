@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{characterizable}
-  s.version = "0.0.17"
+  s.version = "0.1.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Andy Rossmeissl", "Seamus Abshere"]
@@ -29,6 +29,7 @@ Gem::Specification.new do |s|
      "lib/characterizable/better_hash.rb",
      "lib/characterizable/characteristic.rb",
      "lib/characterizable/snapshot.rb",
+     "test/characterizable/test_characteristic.rb",
      "test/helper.rb",
      "test/test_characterizable.rb"
   ]
