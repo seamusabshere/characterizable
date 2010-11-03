@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Andy Rossmeissl", "Seamus Abshere"]
-  s.date = %q{2010-09-30}
+  s.date = %q{2010-11-03}
   s.description = %q{Characterize the relationship between "attributes" (getters/setters) of instances of a class}
   s.email = %q{seamus@abshere.net}
   s.extra_rdoc_files = [
@@ -25,6 +25,10 @@ Gem::Specification.new do |s|
      "VERSION",
      "characterizable.gemspec",
      "lib/characterizable.rb",
+     "lib/characterizable/base.rb",
+     "lib/characterizable/better_hash.rb",
+     "lib/characterizable/characteristic.rb",
+     "lib/characterizable/snapshot.rb",
      "test/helper.rb",
      "test/test_characterizable.rb"
   ]
@@ -34,7 +38,8 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.7}
   s.summary = %q{Characterize instances of a class}
   s.test_files = [
-    "test/helper.rb",
+    "test/characterizable/test_characteristic.rb",
+     "test/helper.rb",
      "test/test_characterizable.rb"
   ]
 
