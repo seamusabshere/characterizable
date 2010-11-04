@@ -34,7 +34,8 @@ module Characterizable
     end
 
     def display(universe)
-      @display.call(value(universe)) if @display
+      val = value(universe)
+      @display.call(val) if @display and val
     end
 
     def known?(universe)
