@@ -13,3 +13,7 @@ class Test::Unit::TestCase
     assert_equal Set.new(a), Set.new(b)
   end
 end
+
+Dir.glob(File.expand_path('support/**/*', File.dirname(__FILE__))).each do |file|
+  require file
+end

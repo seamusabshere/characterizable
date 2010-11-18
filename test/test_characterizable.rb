@@ -23,17 +23,9 @@ class Automobile
     end
     has :record_creation_date, :hidden => true
     has :size_class
-    # has :fuel_type
-    # has :fuel_efficiency, :trumps => [:urbanity, :hybridity], :measures => :length_per_volume
-    # has :urbanity, :measures => :percentage
     has :hybridity
     has :daily_distance_estimate, :trumps => [:weekly_distance_estimate, :annual_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
     has :daily_distance_oracle_estimate, :trumps => :daily_distance_estimate
-    # has :daily_duration, :trumps => [:annual_distance_estimate, :weekly_distance_estimate, :daily_distance_estimate], :measures => :time #, :weekly_fuel_cost, :annual_fuel_cost]
-    # has :weekly_distance_estimate, :trumps => [:annual_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
-    # has :annual_distance_estimate, :trumps => [:weekly_distance_estimate, :daily_distance_estimate, :daily_duration], :measures => :length #, :weekly_fuel_cost, :annual_fuel_cost]
-    # has :acquisition
-    # has :retirement
   end
 end
 
@@ -454,5 +446,18 @@ class TestCharacterizable < Test::Unit::TestCase
     assert_equal 'Brand new FIT', sa.display_characteristic(:model)
     sa.variant = 'Extreme Edition'
     assert_equal 'Featuring Extreme Edition', sa.display_characteristic(:variant)
+  end
+
+  context 'infinite recursion' do
+    should 'not happen' do
+      c = ComplexAutomobile.new
+      c.annual_distance_estimate = "33796.2"
+      c.daily_duration = "3.0"
+      c.timeframe = "2010-01-01/2011-01-01"
+      c.weekly_distance_estimate = "804.672"
+      assert_nothing_raised do
+        c.characteristics
+      end
+    end
   end
 end

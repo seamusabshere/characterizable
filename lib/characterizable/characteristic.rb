@@ -46,22 +46,34 @@ module Characterizable
       not known?(universe) and revealed? universe and not trumped? universe
     end
 
-    def effective?(universe, ignoring = nil)
-      known?(universe) and revealed? universe and not trumped? universe, ignoring
+    def effective?(universe, ignoring = [])
+      known?(universe) and
+        revealed?(universe) and not
+        trumped?(universe, ignoring)
     end
 
-    def trumped?(universe, ignoring = nil)
+    def trumped?(universe, ignoring = [])
       characteristics.each do |_, other|
-        if other.trumps.include? name and not ignoring == other.name
-          if trumps.include? other.name
-            # special case: mutual trumping. current characteristic is trumped if its friend is otherwise effective and it is not otherwise effective
-            return true if other.effective? universe, name and not effective? universe, other.name
-          else
-            return true if other.effective? universe
+        next if ignoring.include?(other.name)
+
+        if other.can_trump? self
+          if can_trump?(other)
+            return mutually_trumped?(universe, other, ignoring) 
+          elsif other.effective?(universe, ignoring + [name])
+            return true
           end
         end
       end
       false
+    end
+
+    def can_trump?(other)
+      trumps.include?(other.name)
+    end
+
+    def mutually_trumped?(universe, other, ignoring)
+      # special case: mutual trumping. current characteristic is trumped if its friend is otherwise effective and it is not otherwise effective
+      other.effective?(universe, ignoring + [name]) and not effective?(universe, ignoring + [other.name])
     end
 
     def revealed?(universe)
